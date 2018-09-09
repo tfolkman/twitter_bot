@@ -4,24 +4,32 @@ util.py
 Contains common utils used across the code
 """
 from typing import List, Tuple
-import re
+from collections import Counter
+from re import sub
+from itertools import chain
+
+UNK = 'unk'
+VOCAB_SIZE = 6000
+
 
 def read_lines(filename: str) -> List[str]:
     """
-
+    Read in file and returns each line as an entry in a list
     Parameters
     ----------
-    filename
+    filename : str
+        Path to the data to be read
 
     Returns
     -------
-    returns a list of sentences from the file
+    list
+        a list of sentences from the file
 
     """
     return open(filename).read().split('\n')[:-1]
 
 
-def filter_line(line: str) -> str:
+def filter_characters(line: str) -> str:
     """
     Removes any non-alphanumeric characters from a string
     Parameters
@@ -35,12 +43,12 @@ def filter_line(line: str) -> str:
         The line with non-alphanumerics filtered out
 
     """
-    return re.sub(r'[^a-zA-Z0-9_\s]+', "", line)
+    return sub(r'[^a-zA-Z0-9_\s]+', "", line)
 
 
-def filter_data(sequences: List[str], min_length: int = 3, max_length: int = 20) -> Tuple[List[str], List[str]]:
+def filter_size(sequences: List[str], min_length: int = 3, max_length: int = 20) -> Tuple[List[str], List[str]]:
     """
-
+    Filters data based on the size of the sentence
     Parameters
     ----------
     sequences : List[str]
@@ -67,3 +75,39 @@ def filter_data(sequences: List[str], min_length: int = 3, max_length: int = 20)
             filtered_query.append(query)
             filtered_answer.append(answer)
     return filtered_query, filtered_answer
+
+
+def create_vocab(tokenized_sentences, vocab_size):
+    """
+    Takes in a list of tokenized sentences and returns the index2word and word2index dictionaries
+    Parameters
+    ----------
+    tokenized_sentences : List[List[str]]
+        List of lists of words
+    vocab_size : int
+        Size of vocabulary you want to keep
+
+    Returns
+    -------
+    dict
+        Index2Word for vocab_size most common words
+    dict
+        Word2Index for vocab_size most common words
+
+    """
+    counter = Counter(chain.from_iterable(tokenized_sentences))
+    vocab = [v[0] for v in counter.most_common(vocab_size)]
+    vocab = ['_'] + [UNK] + vocab
+    index2word = {i: w for i, w in enumerate(vocab)}
+    word2index = {w: i for i, w in index2word.items()}
+    return index2word, word2index
+
+
+def process_file(filepath, export_directory):
+    lines = read_lines(filepath)
+    lines = [line.lower() for line in lines]
+    lines = [filter_size(line) for line in lines]
+    query_lines, answer_lines = filter_size(lines)
+    query_tokens = [sentence.split() for sentence in query_lines]
+    answer_tokens = [sentence.split() for sentence in answer_lines]
+    index2word, word2index = create_vocab(query_tokens + answer_tokens, VOCAB_SIZE)
