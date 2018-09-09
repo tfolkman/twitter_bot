@@ -7,6 +7,12 @@ from typing import List, Tuple
 from collections import Counter
 from re import sub
 from itertools import chain
+import pickle
+import os.path
+import sys
+import logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 UNK = 'unk'
 VOCAB_SIZE = 6000
@@ -26,7 +32,11 @@ def read_lines(filename: str) -> List[str]:
         a list of sentences from the file
 
     """
-    return open(filename).read().split('\n')[:-1]
+    lines = []
+    with open(filename, "r") as f:
+        for l in f:
+            lines.append(l)
+    return lines
 
 
 def filter_characters(line: str) -> str:
@@ -104,10 +114,35 @@ def create_vocab(tokenized_sentences, vocab_size):
 
 
 def process_file(filepath, export_directory):
+    """
+    Process the twitter data into indexes and lines
+    Parameters
+    ----------
+    filepath : str
+        The filepath to the twitter data
+    export_directory : str
+        The directory to export index2word, word2index, query lines, and answer lines
+    """
+    logger.info("Reading in: {}".format(filepath))
     lines = read_lines(filepath)
+    logging.info("Number of lines: {}".format(len(lines)))
     lines = [line.lower() for line in lines]
-    lines = [filter_size(line) for line in lines]
+    logger.info("Filtering lines...")
+    lines = [filter_characters(line) for line in lines]
     query_lines, answer_lines = filter_size(lines)
+    logger.info("Splitting data...")
     query_tokens = [sentence.split() for sentence in query_lines]
     answer_tokens = [sentence.split() for sentence in answer_lines]
+    logger.info("Writing out data...")
     index2word, word2index = create_vocab(query_tokens + answer_tokens, VOCAB_SIZE)
+    pickle.dump(index2word, open(os.path.join(export_directory, "index2word.pickle"), "wb"))
+    pickle.dump(word2index, open(os.path.join(export_directory, "word2index.pickle"), "wb"))
+    pickle.dump(query_lines, open(os.path.join(export_directory, "querylines.pickle"), "wb"))
+    pickle.dump(answer_lines, open(os.path.join(export_directory, "answerlines.pickle"), "wb"))
+
+
+if __name__ == '__main__':
+    """
+    Takes in the file path to twitter data and directory to export pickled files to
+    """
+    process_file(sys.argv[1], sys.argv[2])
