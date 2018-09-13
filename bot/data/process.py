@@ -1,7 +1,7 @@
 """
-util.py
+process.py
 ====================================
-Contains common utils used across the code
+Contains data utils used across the code
 """
 from typing import List, Tuple
 from collections import Counter
@@ -11,11 +11,15 @@ import pickle
 import os.path
 import sys
 import logging
+
+import numpy as np
+
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-UNK = 'unk'
-VOCAB_SIZE = 6000
+UNK = 'unk_token'
+PAD = 'pad_token'
+VOCAB_SIZE = 8000
 
 
 def read_lines(filename: str) -> List[str]:
@@ -35,7 +39,7 @@ def read_lines(filename: str) -> List[str]:
     lines = []
     with open(filename, "r") as f:
         for l in f:
-            lines.append(l)
+            lines.append(l.strip())
     return lines
 
 
@@ -100,17 +104,52 @@ def create_vocab(tokenized_sentences, vocab_size):
     Returns
     -------
     dict
-        Index2Word for vocab_size most common words
+        Index2Word for vocab_size most data words
     dict
-        Word2Index for vocab_size most common words
+        Word2Index for vocab_size most data words
 
     """
     counter = Counter(chain.from_iterable(tokenized_sentences))
     vocab = [v[0] for v in counter.most_common(vocab_size)]
-    vocab = ['_'] + [UNK] + vocab
+    vocab = ['_'] + [UNK] + [PAD] + vocab
     index2word = {i: w for i, w in enumerate(vocab)}
     word2index = {w: i for i, w in index2word.items()}
     return index2word, word2index
+
+
+def convert_sequence_to_padded_indexes(sequence, word2index, max_length):
+    """
+    This function takes in a sequence of words and converts to a sequence of indexes.
+    Pads and inserts unknown tokens where appropriate
+    Parameters
+    ----------
+    sequence : List[str]
+        List of words
+    word2index : dict
+        Word -> Index. Including the UNK and PAD words
+    maxlength : int
+        The maximum length of a sequence across all data
+
+    Returns
+    -------
+    List[int]
+        A list of indexes for the words padded to be max length.
+
+    """
+    indices = []
+    for word in sequence:
+        if word in word2index:
+            indices.append(word2index[word])
+        else:
+            indices.append(word2index[UNK])
+    return indices + [word2index[PAD]]*(max_length - len(sequence))
+
+
+def convert_all_sequences(queries, answers, word2index, max_length):
+    assert len(queries) == len(answers)
+    n_rows = len(queries)
+
+    indx_q = np.zeros()
 
 
 def process_file(filepath, export_directory):
