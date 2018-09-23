@@ -27,7 +27,8 @@ def test_filter_size():
                      "short answer",
                      "l l l l l l l l l l l l l l l l l l l l l",
                      "s s s s"]
-    filtered_queries, filtered_answers = process.filter_size(rows)
+    filtered_queries, filtered_answers = process.filter_size(rows, min_length=process.MIN_LENGTH,
+                                                             max_length=process.MAX_LENGTH)
     assert filtered_queries == ["yeah i'm preparing myself to drop a lot on this man, but definitely need something reliable"]
     assert filtered_answers == ["yeah dude i would definitely consider a daniel defence super reliable and they are just bad ass"]
 

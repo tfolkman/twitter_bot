@@ -11,7 +11,6 @@ import pickle
 import os.path
 import sys
 import logging
-
 import numpy as np
 
 logging.basicConfig(level=logging.DEBUG)
@@ -20,6 +19,8 @@ logger = logging.getLogger(__name__)
 UNK = 'unk_token'
 PAD = 'pad_token'
 VOCAB_SIZE = 8000
+MAX_LENGTH = 20
+MIN_LENGTH = 3
 
 
 def read_lines(filename: str) -> List[str]:
@@ -60,7 +61,7 @@ def filter_characters(line: str) -> str:
     return sub(r'[^a-zA-Z0-9_\s]+', "", line)
 
 
-def filter_size(sequences: List[str], min_length: int = 3, max_length: int = 20) -> Tuple[List[str], List[str]]:
+def filter_size(sequences: List[str], min_length: int, max_length: int) -> Tuple[List[str], List[str]]:
     """
     Filters data based on the size of the sentence
     Parameters
@@ -127,7 +128,7 @@ def convert_sequence_to_padded_indexes(sequence, word2index, max_length):
         List of words
     word2index : dict
         Word -> Index. Including the UNK and PAD words
-    maxlength : int
+    max_length : int
         The maximum length of a sequence across all data
 
     Returns
@@ -149,35 +150,44 @@ def convert_all_sequences(queries, answers, word2index, max_length):
     assert len(queries) == len(answers)
     n_rows = len(queries)
 
-    indx_q = np.zeros()
+    index_q = np.zeros([n_rows, max_length], dtype=np.int32)
+    index_a = np.zeros([n_rows, max_length], dtype=np.int32)
+
+    for i in range(n_rows):
+        index_q[i] = convert_sequence_to_padded_indexes(queries[i], word2index, max_length)
+        index_a[i] = convert_sequence_to_padded_indexes(answers[i], word2index, max_length)
+
+    return index_q, index_a
 
 
-def process_file(filepath, export_directory):
+def process_file(file_path, export_directory):
     """
     Process the twitter data into indexes and lines
     Parameters
     ----------
-    filepath : str
+    file_path : str
         The filepath to the twitter data
     export_directory : str
         The directory to export index2word, word2index, query lines, and answer lines
     """
-    logger.info("Reading in: {}".format(filepath))
-    lines = read_lines(filepath)
+    logger.info("Reading in: {}".format(file_path))
+    lines = read_lines(file_path)
     logging.info("Number of lines: {}".format(len(lines)))
     lines = [line.lower() for line in lines]
     logger.info("Filtering lines...")
     lines = [filter_characters(line) for line in lines]
-    query_lines, answer_lines = filter_size(lines)
+    query_lines, answer_lines = filter_size(lines, MIN_LENGTH, MAX_LENGTH)
     logger.info("Splitting data...")
     query_tokens = [sentence.split() for sentence in query_lines]
     answer_tokens = [sentence.split() for sentence in answer_lines]
-    logger.info("Writing out data...")
+    logger.info("Converting to indexes...")
     index2word, word2index = create_vocab(query_tokens + answer_tokens, VOCAB_SIZE)
+    index_q, index_a = convert_all_sequences(query_tokens, answer_tokens, word2index, MAX_LENGTH)
+    logger.info("Writing out data...")
     pickle.dump(index2word, open(os.path.join(export_directory, "index2word.pickle"), "wb"))
     pickle.dump(word2index, open(os.path.join(export_directory, "word2index.pickle"), "wb"))
-    pickle.dump(query_lines, open(os.path.join(export_directory, "querylines.pickle"), "wb"))
-    pickle.dump(answer_lines, open(os.path.join(export_directory, "answerlines.pickle"), "wb"))
+    pickle.dump(index_q, open(os.path.join(export_directory, "querylines.pickle"), "wb"))
+    pickle.dump(index_a, open(os.path.join(export_directory, "answerlines.pickle"), "wb"))
 
 
 if __name__ == '__main__':
