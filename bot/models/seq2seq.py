@@ -118,3 +118,25 @@ class DecoderRNN(nn.Module):
 
         """
         return torch.zeros(1, 1, self.hidden_size).to(device)
+
+
+class Seq2SeqModel:
+
+    def __init__(self, input_size, output_size, hidden_size, lr=1e-3):
+        self.encoder = EncoderRNN(input_size, hidden_size)
+        self.decoder = DecoderRNN(hidden_size, output_size)
+
+        self.encoder_optimizer = torch.optim.Adam(self.encoder.parameters(), lr)
+        self.decoder_optimizer = torch.optim.Adam(self.decoder.parameters(), lr)
+
+    def fit(self, pytorch_dataset, n_iters):
+        for iteration in range(1, n_iters+1):
+            for query, answer in pytorch_dataset:
+                loss = self.__train(query, answer)
+
+    def __train(self, query, answer):
+        encoder_hidden = self.encoder.init_hidden()
+
+        self.encoder_optimizer.zero_grad()
+        self.decoder_optimizer.zero_grad()
+
