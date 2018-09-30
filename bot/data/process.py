@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 UNK = 'unk_token'
 PAD = 'pad_token'
+SOS = '<SOS>'
+EOS = '<EOS>'
 VOCAB_SIZE = 8000
 MAX_LENGTH = 20
 MIN_LENGTH = 3
@@ -112,7 +114,7 @@ def create_vocab(tokenized_sentences, vocab_size):
     """
     counter = Counter(chain.from_iterable(tokenized_sentences))
     vocab = [v[0] for v in counter.most_common(vocab_size)]
-    vocab = ['_'] + [UNK] + [PAD] + vocab
+    vocab = ['_'] + [UNK] + [PAD] + [SOS] + [EOS] + vocab
     index2word = {i: w for i, w in enumerate(vocab)}
     word2index = {w: i for i, w in index2word.items()}
     return index2word, word2index
@@ -122,6 +124,7 @@ def convert_sequence_to_padded_indexes(sequence, word2index, max_length):
     """
     This function takes in a sequence of words and converts to a sequence of indexes.
     Pads and inserts unknown tokens where appropriate
+    Also adds start and end of sentence tokens
     Parameters
     ----------
     sequence : List[str]
@@ -137,13 +140,13 @@ def convert_sequence_to_padded_indexes(sequence, word2index, max_length):
         A list of indexes for the words padded to be max length.
 
     """
-    indices = []
+    indices = [word2index[SOS]]
     for word in sequence:
         if word in word2index:
             indices.append(word2index[word])
         else:
             indices.append(word2index[UNK])
-    return indices + [word2index[PAD]]*(max_length - len(sequence))
+    return indices + [word2index[PAD]]*(max_length - len(sequence)) + [word2index[EOS]]
 
 
 def convert_all_sequences(queries, answers, word2index, max_length):

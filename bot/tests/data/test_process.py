@@ -36,12 +36,13 @@ def test_filter_size():
 def test_create_vocab():
     tokenized_sentences = [["the", "fox", "ran"], ["the", "fox", "jumped"], ["the", "fox", "swam"]]
     index2word, word2index = process.create_vocab(tokenized_sentences, 2)
-    assert index2word == {0: "_", 1: process.UNK, 2: process.PAD, 3: 'the', 4: 'fox'}
-    assert word2index == {"_": 0, process.UNK: 1, process.PAD: 2, 'the': 3, 'fox': 4}
+    assert index2word == {0: "_", 1: process.UNK, 2: process.PAD, 3: process.SOS, 4: process.EOS, 5: 'the', 6: 'fox'}
+    assert word2index == {"_": 0, process.UNK: 1, process.PAD: 2, process.SOS: 3, process.EOS: 4, 'the': 5, 'fox': 6}
 
 
 def test_convert_sequence_to_padded_indexes():
     sequence = ["the", "fox", "ran", "insanely"]
-    word2index = {"the": 0, "fox": 1, "ran": 2, process.UNK: 3, process.PAD: 4}
+    word2index = {"the": 0, "fox": 1, "ran": 2, process.UNK: 3, process.PAD: 4, process.SOS: 5, process.EOS: 6}
     converted_sequence = process.convert_sequence_to_padded_indexes(sequence, word2index, 10)
-    assert converted_sequence == [0, 1, 2, 3, 4, 4, 4, 4, 4, 4]
+    print(converted_sequence)
+    assert converted_sequence == [5, 0, 1, 2, 3, 4, 4, 4, 4, 4, 4, 6]

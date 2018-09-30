@@ -123,20 +123,31 @@ class DecoderRNN(nn.Module):
 class Seq2SeqModel:
 
     def __init__(self, input_size, output_size, hidden_size, lr=1e-3):
-        self.encoder = EncoderRNN(input_size, hidden_size)
-        self.decoder = DecoderRNN(hidden_size, output_size)
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+        self.encoder = EncoderRNN(input_size, hidden_size).to(self.device)
+        self.decoder = DecoderRNN(hidden_size, output_size).to(self.device)
 
         self.encoder_optimizer = torch.optim.Adam(self.encoder.parameters(), lr)
         self.decoder_optimizer = torch.optim.Adam(self.decoder.parameters(), lr)
 
-    def fit(self, pytorch_dataset, n_iters):
+    def fit(self, pytorch_dataset, n_iters,):
         for iteration in range(1, n_iters+1):
             for query, answer in pytorch_dataset:
                 loss = self.__train(query, answer)
 
     def __train(self, query, answer):
-        encoder_hidden = self.encoder.init_hidden()
+        encoder_hidden = self.encoder.init_hidden(self.device)
 
         self.encoder_optimizer.zero_grad()
         self.decoder_optimizer.zero_grad()
+
+        input_length = query.size()[0]
+        target_length = answer.size()[0]
+
+        for i in range(input_length):
+            encoder_output, encoder_hidden = self.encoder(query[i], encoder_hidden)
+
+        decoder_hidden = encoder_hidden
+        decoder_input
 
